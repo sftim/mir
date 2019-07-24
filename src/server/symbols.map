@@ -981,5 +981,6 @@ MIR_SERVER_1.4 {
     mir::shell::ShellWrapper::remove_observer*;
     mir::shell::SurfaceStackWrapper::add_observer*;
     mir::shell::SurfaceStackWrapper::remove_observer*;
+    mir::scene::NullSurfaceObserver::application_id_set_to*;
   };
 } MIR_SERVER_1.3;
