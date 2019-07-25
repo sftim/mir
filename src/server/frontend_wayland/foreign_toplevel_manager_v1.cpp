@@ -18,7 +18,7 @@
 
 #include "foreign_toplevel_manager_v1.h"
 
-#include "window_wl_surface_role.h"
+#include "wayland_utils.h"
 #include "wl_seat.h"
 #include "mir/frontend/shell.h"
 #include "mir/shell/surface_specification.h"
@@ -107,7 +107,8 @@ private:
 };
 
 class ForeignToplevelHandleV1::Observer
-    : public scene::NullSurfaceObserver
+    : public scene::NullSurfaceObserver,
+      private std::enable_shared_from_this<Observer>
 {
 public:
     Observer(
@@ -337,7 +338,8 @@ void mf::ForeignToplevelHandleV1::Observer::create_toplevel_handle()
     auto state = surface.value()->state();
 
     seat.spawn(
-        [toplevel_manager = wayland_toplevel_manager,
+        [self = shared_from_this(),
+         toplevel_manager = wayland_toplevel_manager,
          toplevel_handle = wayland_toplevel_handle.value(),
          name,
          id,
@@ -348,7 +350,7 @@ void mf::ForeignToplevelHandleV1::Observer::create_toplevel_handle()
             if (!*toplevel_manager)
                 return;
 
-            new ForeignToplevelHandleV1{*toplevel_manager->value(), toplevel_handle};
+            new ForeignToplevelHandleV1{*toplevel_manager->value(), self, toplevel_handle};
             if (!*toplevel_handle)
                 BOOST_THROW_EXCEPTION(std::logic_error("toplevel_handle not set up by constructor"));
 
@@ -543,10 +545,12 @@ void mf::ForeignToplevelHandleV1::has_closed()
 
 mf::ForeignToplevelHandleV1::ForeignToplevelHandleV1(
     ForeignToplevelManagerV1 const& manager,
+    std::shared_ptr<Observer> const surface_observer,
     std::shared_ptr<std::experimental::optional<ForeignToplevelHandleV1*>> const weak_self)
     : mw::ForeignToplevelHandleV1(manager),
       weak_self{weak_self},
-      manager_observer_owner{manager.observer_owner()}
+      manager_observer_owner{manager.observer_owner()},
+      surface_observer{surface_observer}
 {
     *weak_self = this;
     manager.send_toplevel_event(resource);

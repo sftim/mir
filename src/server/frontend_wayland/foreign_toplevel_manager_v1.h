@@ -101,6 +101,7 @@ public:
 private:
     ForeignToplevelHandleV1(
         ForeignToplevelManagerV1 const& manager,
+        std::shared_ptr<Observer> surface_observer,
         std::shared_ptr<std::experimental::optional<ForeignToplevelHandleV1*>> const weak_self);
     ~ForeignToplevelHandleV1();
 
@@ -126,6 +127,8 @@ private:
     /// so all surfaces observers are cleared at that point. For this reason, we need to keep the
     /// ForeignToplevelManagerV1::ObserverOwner around even after the ForeignToplevelManagerV1 has been destroyed
     std::shared_ptr<ForeignToplevelManagerV1::ObserverOwner> const manager_observer_owner;
+
+    std::shared_ptr<Observer> const surface_observer;
 };
 }
 }
