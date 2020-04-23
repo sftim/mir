@@ -30,6 +30,7 @@
 #include "mir/graphics/buffer.h"
 #include "mir/renderer/sw/pixel_source.h"
 #include "mir/compositor/buffer_stream.h"
+#include "mir/log.h"
 
 #include <linux/input-event-codes.h>
 #include <boost/throw_exception.hpp>
@@ -119,23 +120,19 @@ mf::WlPointer::~WlPointer()
 
 void mf::WlPointer::enter(WlSurface* parent_surface, geom::Point const& position_on_parent)
 {
-    auto const serial = wl_display_next_serial(display);
     auto const final = parent_surface->transform_point(position_on_parent);
-
-    cursor->apply_to(final.surface);
-    send_enter_event(
-        serial,
-        final.surface->raw_resource(),
-        final.position.x.as_int(),
-        final.position.y.as_int());
-    can_send_frame = true;
-    final.surface->add_destroy_listener(
-        this,
-        [this]()
-        {
-            leave();
-        });
-    surface_under_cursor = final.surface;
+    if (final)
+    {
+        enter_internal(final.value().first, final.value().second);
+    }
+    else
+    {
+        // this should only happen if the Mir surface input shape doesn't match the Wayland surface's input region
+        log_warning(
+            "Mir surface got pointer enter event at %d, %d which didn't land in any wl_surface input regions",
+            position_on_parent.x.as_int(),
+            position_on_parent.y.as_int());
+    }
 }
 
 void mf::WlPointer::leave()
@@ -167,18 +164,33 @@ void mf::WlPointer::motion(
 {
     auto final = parent_surface->transform_point(position_on_parent);
 
-    if (surface_under_cursor && final.surface == surface_under_cursor.value())
+    if (final)
     {
-        send_motion_event(
-            ms.count(),
-            final.position.x.as_int(),
-            final.position.y.as_int());
-        can_send_frame = true;
+        auto const surface = final.value().first;
+        auto const position = final.value().second;
+
+        if (surface_under_cursor && surface == surface_under_cursor.value())
+        {
+            send_motion_event(
+                ms.count(),
+                position.x.as_int(),
+                position.y.as_int());
+            can_send_frame = true;
+        }
+        else
+        {
+            leave();
+            enter_internal(surface, position_on_parent);
+        }
     }
     else
     {
         leave();
-        enter(final.surface, final.position);
+        // this should only happen if the Mir surface input shape doesn't match the Wayland surface's input region
+        log_warning(
+            "Mir surface got pointer motion event at %d, %d which didn't land in any wl_surface input regions",
+            position_on_parent.x.as_int(),
+            position_on_parent.y.as_int());
     }
 }
 
@@ -208,6 +220,25 @@ void mf::WlPointer::frame()
     if (can_send_frame && version_supports_frame())
         send_frame_event();
     can_send_frame = false;
+}
+
+void mf::WlPointer::enter_internal(WlSurface* surface, geometry::Point const& position)
+{
+    auto const serial = wl_display_next_serial(display);
+    cursor->apply_to(surface);
+    send_enter_event(
+        serial,
+        surface->raw_resource(),
+        position.x.as_int(),
+        position.y.as_int());
+    can_send_frame = true;
+    surface->add_destroy_listener(
+        this,
+        [this]()
+        {
+            leave();
+        });
+    surface_under_cursor = surface;
 }
 
 namespace

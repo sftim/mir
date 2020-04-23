@@ -54,18 +54,32 @@ void mf::WlTouch::down(
     geometry::Point const& position_on_parent)
 {
     auto const final = parent->transform_point(position_on_parent);
-    auto const serial = wl_display_next_serial(wl_client_get_display(client));
+    if (final)
+    {
+        auto const surface = final.value().first;
+        auto const position = final.value().second;
+        auto const serial = wl_display_next_serial(wl_client_get_display(client));
 
-    focused_surface_for_ids[touch_id] = final.surface;
-
-    send_down_event(
-        serial,
-        ms.count(),
-        final.surface->raw_resource(),
-        touch_id,
-        final.position.x.as_int(),
-        final.position.y.as_int());
-    can_send_frame = true;
+        focused_surface_for_ids[touch_id] = surface;
+        send_down_event(
+            serial,
+            ms.count(),
+            surface->raw_resource(),
+            touch_id,
+            position.x.as_int(),
+            position.y.as_int());
+        can_send_frame = true;
+    }
+    else
+    {
+        // this should only happen if the Mir surface input shape doesn't match the Wayland surface's input region
+        log_warning(
+            "Mir surface got touch down event at %d, %d which didn't land in any wl_surface input regions."
+            " Touch ID %d will be invalid",
+            position_on_parent.x.as_int(),
+            position_on_parent.y.as_int(),
+            touch_id);
+    }
 }
 
 void mf::WlTouch::motion(
@@ -78,7 +92,7 @@ void mf::WlTouch::motion(
 
     if (final_surface == focused_surface_for_ids.end())
     {
-        log_warning("WlTouch::motion() called with invalid ID");
+        log_warning("WlTouch::motion() called with invalid ID %d", touch_id);
         return;
     }
 
@@ -97,13 +111,18 @@ void mf::WlTouch::up(std::chrono::milliseconds const& ms, int32_t touch_id)
 {
     auto const serial = wl_display_next_serial(wl_client_get_display(client));
 
-    focused_surface_for_ids.erase(touch_id);
-
-    send_up_event(
-        serial,
-        ms.count(),
-        touch_id);
-    can_send_frame = true;
+    if (focused_surface_for_ids.erase(touch_id))
+    {
+        send_up_event(
+            serial,
+            ms.count(),
+            touch_id);
+        can_send_frame = true;
+    }
+    else
+    {
+        log_warning("WlTouch::up() called with invalid ID %d", touch_id);
+    }
 }
 
 void mf::WlTouch::frame()

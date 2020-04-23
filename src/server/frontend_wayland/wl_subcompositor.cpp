@@ -116,7 +116,8 @@ void mf::WlSubsurface::parent_has_committed()
     }
 }
 
-mf::WlSurface::Position mf::WlSubsurface::transform_point(geom::Point point)
+auto mf::WlSubsurface::transform_point(
+        geom::Point point) -> std::experimental::optional<std::pair<WlSurface*, geom::Point>>
 {
     return surface->transform_point(point);
 }
