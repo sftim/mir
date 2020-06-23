@@ -164,7 +164,7 @@ mf::XWaylandSurface::XWaylandSurface(
           property_handler<std::string const&>(
               connection,
               window,
-              connection->net_wm_name,
+              connection->_NET_WM_NAME,
               [this](auto value)
               {
                   std::lock_guard<std::mutex> lock{mutex};
@@ -185,7 +185,7 @@ mf::XWaylandSurface::XWaylandSurface(
           property_handler<std::vector<xcb_atom_t> const&>(
               connection,
               window,
-              connection->wm_protocols,
+              connection->WM_PROTOCOLS,
               [this](std::vector<xcb_atom_t> const& value)
               {
                   std::lock_guard<std::mutex> lock{mutex};
@@ -221,7 +221,7 @@ void mf::XWaylandSurface::map()
     uint32_t const workspace = 1;
     connection->set_property<XCBType::CARDINAL32>(
         window,
-        connection->net_wm_desktop,
+        connection->_NET_WM_DESKTOP,
         workspace);
 
     state.withdrawn = false;
@@ -259,7 +259,7 @@ void mf::XWaylandSurface::close()
         xwm->forget_scene_surface(scene_surface);
     }
 
-    connection->delete_property(window, connection->net_wm_desktop);
+    connection->delete_property(window, connection->_NET_WM_DESKTOP);
 
     state.withdrawn = true;
     inform_client_of_window_state(state);
@@ -303,14 +303,14 @@ void mf::XWaylandSurface::take_focus()
             return;
 
         supports_take_focus = (
-            cached.supported_wm_protocols.find(connection->wm_take_focus) !=
+            cached.supported_wm_protocols.find(connection->WM_TAKE_FOCUS) !=
             cached.supported_wm_protocols.end());
     }
 
     if (supports_take_focus)
     {
         uint32_t const client_message_data[]{
-            connection->wm_take_focus,
+            connection->WM_TAKE_FOCUS,
             XCB_TIME_CURRENT_TIME};
 
         connection->send_client_message<XCBType::WM_PROTOCOLS>(
@@ -435,11 +435,11 @@ void mf::XWaylandSurface::net_wm_state_client_message(uint32_t const (&data)[5])
             {
                 bool nil{false}, *prop_ptr = &nil;
 
-                if (property == connection->net_wm_state_hidden)
+                if (property == connection->_NET_WM_STATE_HIDDEN)
                     prop_ptr = &new_window_state.minimized;
-                else if (property == connection->net_wm_state_maximized_horz) // assume vert is also set
+                else if (property == connection->_NET_WM_STATE_MAXIMIZED_HORZ) // assume vert is also set
                     prop_ptr = &new_window_state.maximized;
-                else if (property == connection->net_wm_state_fullscreen)
+                else if (property == connection->_NET_WM_STATE_FULLSCREEN)
                     prop_ptr = &new_window_state.fullscreen;
 
                 switch (action)
@@ -767,7 +767,7 @@ void mf::XWaylandSurface::scene_surface_close_requested()
     {
         std::lock_guard<std::mutex> lock{mutex};
         delete_window = (
-            cached.supported_wm_protocols.find(connection->wm_delete_window) !=
+            cached.supported_wm_protocols.find(connection->WM_DELETE_WINDOW) !=
             cached.supported_wm_protocols.end());
     }
 
@@ -780,7 +780,7 @@ void mf::XWaylandSurface::scene_surface_close_requested()
                 connection->window_debug_string(window).c_str());
         }
         uint32_t const client_message_data[]{
-            connection->wm_delete_window,
+            connection->WM_DELETE_WINDOW,
             XCB_TIME_CURRENT_TIME,
         };
         connection->send_client_message<XCBType::WM_PROTOCOLS>(window, XCB_EVENT_MASK_NO_EVENT, client_message_data);
@@ -965,14 +965,14 @@ void mf::XWaylandSurface::inform_client_of_window_state(WindowState const& new_w
         static_cast<uint32_t>(wm_state),
         XCB_WINDOW_NONE // Icon window
     };
-    connection->set_property<XCBType::WM_STATE>(window, connection->wm_state, wm_state_properties);
+    connection->set_property<XCBType::WM_STATE>(window, connection->WM_STATE, wm_state_properties);
 
     if (new_window_state.withdrawn)
     {
         xcb_delete_property(
             *connection,
             window,
-            connection->net_wm_state);
+            connection->_NET_WM_STATE);
     }
     else
     {
@@ -980,20 +980,20 @@ void mf::XWaylandSurface::inform_client_of_window_state(WindowState const& new_w
 
         if (new_window_state.minimized)
         {
-            net_wm_states.push_back(connection->net_wm_state_hidden);
+            net_wm_states.push_back(connection->_NET_WM_STATE_HIDDEN);
         }
         if (new_window_state.maximized)
         {
-            net_wm_states.push_back(connection->net_wm_state_maximized_horz);
-            net_wm_states.push_back(connection->net_wm_state_maximized_vert);
+            net_wm_states.push_back(connection->_NET_WM_STATE_MAXIMIZED_HORZ);
+            net_wm_states.push_back(connection->_NET_WM_STATE_MAXIMIZED_VERT);
         }
         if (new_window_state.fullscreen)
         {
-            net_wm_states.push_back(connection->net_wm_state_fullscreen);
+            net_wm_states.push_back(connection->_NET_WM_STATE_FULLSCREEN);
         }
         // TODO: Set _NET_WM_STATE_MODAL if appropriate
 
-        connection->set_property<XCBType::ATOM>(window, connection->net_wm_state, net_wm_states);
+        connection->set_property<XCBType::ATOM>(window, connection->_NET_WM_STATE, net_wm_states);
     }
 
     connection->flush();
