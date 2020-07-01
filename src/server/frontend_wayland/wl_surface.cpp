@@ -377,7 +377,7 @@ void mf::WlSurface::commit(WlSurfaceState const& state)
                         {
                             if (weak_self)
                             {
-                                weak_self.value().send_frame_callbacks();
+                                weak_self.value()->send_frame_callbacks();
                             }
                         });
                 };

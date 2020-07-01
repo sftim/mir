@@ -86,7 +86,7 @@ mf::WlSubsurface::~WlSubsurface()
 {
     if (parent)
     {
-        parent.value().remove_subsurface(this);
+        parent.value()->remove_subsurface(this);
     }
     surface->clear_role();
     refresh_surface_data_now();
@@ -106,20 +106,20 @@ void mf::WlSubsurface::populate_surface_data(std::vector<shell::StreamSpecificat
 auto mf::WlSubsurface::total_offset() const -> geom::Displacement
 {
     return parent ?
-        parent.value().offset() :
+        parent.value()->offset() :
         geom::Displacement{};
 }
 
 auto mf::WlSubsurface::synchronized() const -> bool
 {
-    bool const parent_synchronized = parent && parent.value().synchronized();
+    bool const parent_synchronized = parent && parent.value()->synchronized();
     return synchronized_ || parent_synchronized;
 }
 
 auto mf::WlSubsurface::scene_surface() const -> std::experimental::optional<std::shared_ptr<scene::Surface>>
 {
     return parent ?
-        parent.value().scene_surface() :
+        parent.value()->scene_surface() :
         std::experimental::nullopt;
 }
 
@@ -173,7 +173,7 @@ void mf::WlSubsurface::refresh_surface_data_now()
 {
     if (parent)
     {
-        parent.value().refresh_surface_data_now();
+        parent.value()->refresh_surface_data_now();
     }
 }
 
@@ -198,7 +198,7 @@ void mf::WlSubsurface::commit(WlSurfaceState const& state)
     {
         if (cached_state.value().surface_data_needs_refresh() && parent)
         {
-            parent.value().pending_invalidate_surface_data();
+            parent.value()->pending_invalidate_surface_data();
         }
     }
     else

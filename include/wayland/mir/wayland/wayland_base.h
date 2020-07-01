@@ -84,13 +84,13 @@ public:
         return resource && !*destroyed_flag;
     }
 
-    auto value() const -> T&
+    auto value() const -> T*
     {
         if (!*this)
         {
             BOOST_THROW_EXCEPTION(std::runtime_error("Attempted access of destroyed Wayland resource"));
         }
-        return *resource;
+        return resource;
     }
 
 private:
