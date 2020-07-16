@@ -117,7 +117,9 @@ auto fork_xwayland_process(
 
     case 0:
         exec_xwayland(spawner, xwayland_path, wayland_pipe.client, x11_wm_pipe.server);
-        perror("Failed to start XWayland, should be unreachable");
+
+        // Only reached if XWayland is not successfully executed
+        perror(("Failed to execute XWayland binary `" + xwayland_path + "`").c_str());
         abort();
 
     default:
