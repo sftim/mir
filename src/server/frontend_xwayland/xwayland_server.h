@@ -56,8 +56,13 @@ public:
     };
 
 private:
+    class StartupSignalHandler;
+
     XWaylandServer(XWaylandServer const&) = delete;
     XWaylandServer& operator=(XWaylandServer const&) = delete;
+
+    /// Created at the beginning of the constructor and destroyed at the end
+    std::unique_ptr<StartupSignalHandler> startup_signal_handler;
 
     XWaylandProcess const xwayland_process;
     wl_client* const wayland_client{nullptr};
